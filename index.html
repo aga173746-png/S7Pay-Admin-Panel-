@@ -1,0 +1,30 @@
+<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S7 Pay Admin</title><style>
+body{font-family:Arial;margin:0;background:#f3f6fa;color:#17202a}header{background:#111827;color:#fff;padding:16px 20px}
+main{max-width:1000px;margin:20px auto;padding:0 14px}.card{background:#fff;padding:20px;border-radius:14px;margin-bottom:16px;box-shadow:0 2px 12px #0001}
+input,button{width:100%;padding:12px;margin:5px 0;border-radius:8px;border:1px solid #ccd3dd;box-sizing:border-box}button{background:#111827;color:#fff;border:0;font-weight:bold}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{padding:18px;background:#f8fafc;border-radius:10px}.stat b{display:block;font-size:25px;margin-top:5px}
+@media(max-width:650px){.grid{grid-template-columns:1fr}}table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #eee;text-align:left}
+#panel{display:none}.ok{color:#087f5b}.err{color:#c92a2a}
+</style></head><body><header><b>S7 Pay Admin Panel</b></header><main>
+<div class="card" id="login">
+<h2>Admin Login</h2><input id="api" placeholder="Backend URL e.g. https://api.example.com">
+<input id="email" placeholder="Admin email"><input id="pass" type="password" placeholder="Password">
+<button onclick="login()">Login</button><p id="lm"></p></div>
+<div class="card" id="setup">
+<h2>First Admin Create</h2><p>Backend-এর SETUP_KEY এখানে দিতে হবে।</p>
+<input id="se" placeholder="Your admin email"><input id="sp" type="password" placeholder="Strong password (10+ chars)">
+<input id="sk" type="password" placeholder="SETUP_KEY">
+<button onclick="setup()">Create Admin</button><p id="sm"></p></div>
+<div id="panel"><div class="grid"><div class="stat">Users<b id="u">—</b></div><div class="stat">Tasks<b id="t">—</b></div><div class="stat">Pending<b id="w">—</b></div></div>
+<div class="card"><h2>Add Task</h2><input id="tt" placeholder="Task title"><input id="td" placeholder="Description"><input id="tr" type="number" placeholder="Reward"><button onclick="addTask()">Add Task</button></div>
+<div class="card"><h2>Tasks</h2><div id="tl"></div></div><div class="card"><h2>Withdrawals</h2><div id="wl"></div></div></div>
+</main><script>
+let API=localStorage.s7api||"",TOKEN=localStorage.s7token||"";const $=x=>document.getElementById(x);
+$("api").value=API;
+async function setup(){API=$("api").value.trim().replace(/\\/$/,"");localStorage.s7api=API;try{let r=await fetch(API+"/api/admin/setup",{method:"POST",headers:{"Content-Type":"application/json","x-setup-key":$("sk").value},body:JSON.stringify({email:$("se").value,password:$("sp").value})}),d=await r.json();$("sm").textContent=d.message||d.error}catch(e){$("sm").textContent=e.message}}
+async function login(){API=$("api").value.trim().replace(/\\/$/,"");localStorage.s7api=API;try{let r=await fetch(API+"/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value,password:$("pass").value})}),d=await r.json();if(!r.ok)throw Error(d.error);TOKEN=d.token;localStorage.s7token=TOKEN;$("login").style.display="none";$("setup").style.display="none";$("panel").style.display="block";load()}catch(e){$("lm").textContent=e.message}}
+async function api(p,o={}){let r=await fetch(API+p,{...o,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(o.headers||{})}}),d=await r.json();if(!r.ok)throw Error(d.error||"Error");return d}
+async function load(){let d=await api("/api/admin/dashboard");$("u").textContent=d.users;$("t").textContent=d.tasks;$("w").textContent=d.pendingWithdrawals;let a=(await api("/api/admin/tasks")).tasks;$("tl").innerHTML="<table><tr><th>ID</th><th>Title</th><th>Reward</th></tr>"+a.map(x=>`<tr><td>${x.id}</td><td>${x.title}</td><td>${x.reward}</td></tr>`).join("")+"</table>";let v=(await api("/api/admin/withdrawals")).withdrawals;$("wl").innerHTML="<table><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th></tr>"+v.map(x=>`<tr><td>${x.id}</td><td>${x.user_id}</td><td>${x.amount}</td><td>${x.status}</td></tr>`).join("")+"</table>"}
+async function addTask(){await api("/api/admin/tasks",{method:"POST",body:JSON.stringify({title:$("tt").value,description:$("td").value,reward:Number($("tr").value||0)})});load()}
+</script></body></html>
