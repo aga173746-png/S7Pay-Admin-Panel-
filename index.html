@@ -1,61 +1,312 @@
-<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>S7 Pay Admin</title><style>
-body{font-family:Arial;margin:0;background:#f3f6fa;color:#17202a}header{background:#111827;color:#fff;padding:16px 20px}
-main{max-width:1000px;margin:20px auto;padding:0 14px}.card{background:#fff;padding:20px;border-radius:14px;margin-bottom:16px;box-shadow:0 2px 12px #0001}
-input,button{width:100%;padding:12px;margin:5px 0;border-radius:8px;border:1px solid #ccd3dd;box-sizing:border-box}button{background:#111827;color:#fff;border:0;font-weight:bold}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{padding:18px;background:#f8fafc;border-radius:10px}.stat b{display:block;font-size:25px;margin-top:5px}
-@media(max-width:650px){.grid{grid-template-columns:1fr}}table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #eee;text-align:left}
-#panel{display:none}.ok{color:#087f5b}.err{color:#c92a2a}
-</style></head><body><header><b>S7 Pay Admin Panel</b></header><main>
-<div class="card" id="login">
-<h2>Admin Login</h2><input id="api" placeholder="Backend URL e.g. https://api.example.com">
-<input id="email" placeholder="Admin email"><input id="pass" type="password" placeholder="Password">
-<button onclick="login()">Login</button><p id="lm"></p></div>
-<div class="card" id="setup">
-<h2>First Admin Create</h2><p>Backend-এর SETUP_KEY এখানে দিতে হবে।</p>
-<input id="se" placeholder="Your admin email"><input id="sp" type="password" placeholder="Strong password (10+ chars)">
-<input id="sk" type="password" placeholder="SETUP_KEY">
-<button onclick="setup()">Create Admin</button><p id="sm"></p></div>
-<div id="panel"><div class="grid"><div class="stat">Users<b id="u">—</b></div><div class="stat">Tasks<b id="t">—</b></div><div class="stat">Pending<b id="w">—</b></div></div>
-  <div class="card">
-<h2>bKash Payment Settings</h2>
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S7 Pay Admin</title>
+<style>
+body{font-family:Arial;margin:0;background:#f3f6fa;color:#17202a}
+header{background:#111827;color:#fff;padding:16px 20px}
+main{max-width:1100px;margin:20px auto;padding:0 14px}
+.card{background:#fff;padding:20px;border-radius:14px;margin-bottom:16px;box-shadow:0 2px 12px #0001}
+input,button{width:100%;padding:12px;margin:5px 0;border-radius:8px;border:1px solid #ccd3dd;box-sizing:border-box}
+button{background:#111827;color:#fff;border:0;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+.approve{background:#087f5b}
+.reject{background:#c92a2a}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat{padding:18px;background:#f8fafc;border-radius:10px}
+.stat b{display:block;font-size:25px;margin-top:5px}
+@media(max-width:650px){.grid{grid-template-columns:1fr}}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:650px}
+td,th{padding:9px;border-bottom:1px solid #eee;text-align:left}
+#panel{display:none}
+.ok{color:#087f5b}
+.err{color:#c92a2a}
+</style>
+</head>
+<body>
+<header><b>S7 Pay Admin Panel</b></header>
+<main>
 
-<label>bKash Number</label>
+<div class="card" id="login">
+<h2>Admin Login</h2>
+<input id="api" placeholder="Backend URL">
+<input id="email" placeholder="Admin email">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="lm"></p>
+</div>
+
+<div class="card" id="setup">
+<h2>First Admin Create</h2>
+<p>শুধু প্রথম Admin তৈরি করার সময় ব্যবহার করুন।</p>
+<input id="se" placeholder="Admin email">
+<input id="sp" type="password" placeholder="Strong password">
+<input id="sk" type="password" placeholder="SETUP_KEY">
+<button onclick="setupAdmin()">Create Admin</button>
+<p id="sm"></p>
+</div>
+
+<div id="panel">
+
+<div class="grid">
+<div class="stat">Users<b id="u">—</b></div>
+<div class="stat">Tasks<b id="t">—</b></div>
+<div class="stat">Pending Withdrawals<b id="w">—</b></div>
+</div>
+
+<div class="card">
+<h2>bKash Payment Settings</h2>
+<label>আপনার bKash নম্বর</label>
 <input id="bkash" placeholder="01XXXXXXXXX">
 
-<label>Payment Amount</label>
-<input id="payamount" type="number" placeholder="কত টাকা পাঠাতে হবে">
+<label>User কত টাকা পাঠাবে?</label>
+<input id="payamount" type="number" min="1" placeholder="যেমন 100">
 
-<label>Instructions</label>
+<label>User কত টাকা Reward পাবে?</label>
+<input id="rewardamount" type="number" min="0.01" step="0.01" placeholder="যেমন 20">
+
+<label>Payment Instructions</label>
 <input id="payinstructions" placeholder="টাকা পাঠানোর নিয়ম">
 
-<button onclick="savePaymentSettings()">Save bKash Settings</button>
+<button onclick="savePaymentSettings()">Save Payment Settings</button>
 <p id="paymsg"></p>
-  </div>
-<div class="card"><h2>Add Task</h2><input id="tt" placeholder="Task title"><input id="td" placeholder="Description"><input id="tr" type="number" placeholder="Reward"><button onclick="addTask()">Add Task</button></div>
-<div class="card"><h2>Tasks</h2><div id="tl"></div></div><div class="card"><h2>Withdrawals</h2><div id="wl"></div></div></div>
-</main><script>
-let API=localStorage.s7api||"",TOKEN=localStorage.s7token||"";const $=x=>document.getElementById(x);
+</div>
+
+<div class="card">
+<h2>Deposit Requests</h2>
+<button onclick="loadDeposits()">Refresh Deposits</button>
+<p id="depmsg"></p>
+<div id="dl" class="tablewrap">আবেদন লোড করতে Login করুন।</div>
+</div>
+
+<div class="card">
+<h2>Add Task</h2>
+<input id="tt" placeholder="Task title">
+<input id="td" placeholder="Description">
+<input id="tr" type="number" min="0" placeholder="Reward">
+<button onclick="addTask()">Add Task</button>
+<p id="taskmsg"></p>
+</div>
+
+<div class="card">
+<h2>Tasks</h2>
+<div id="tl" class="tablewrap"></div>
+</div>
+
+<div class="card">
+<h2>Withdrawals</h2>
+<div id="wl" class="tablewrap"></div>
+</div>
+
+</div>
+</main>
+
+<script>
+let API=localStorage.s7api||"https://s7-pay-backend.onrender.com";
+let TOKEN=localStorage.s7token||"";
+const $=id=>document.getElementById(id);
 $("api").value=API;
-async function setup(){API=$("api").value.trim().replace(/\/$/,"");localStorage.s7api=API;try{let r=await fetch(API+"/api/admin/setup",{method:"POST",headers:{"Content-Type":"application/json","x-setup-key":$("sk").value},body:JSON.stringify({email:$("se").value,password:$("sp").value})}),d=await r.json();$("sm").textContent=d.message||d.error}catch(e){$("sm").textContent=e.message}}
-async function login(){API=$("api").value.trim().replace(/\/$/,"");localStorage.s7api=API;try{let r=await fetch(API+"/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value,password:$("pass").value})}),d=await r.json();if(!r.ok)throw Error(d.error);TOKEN=d.token;localStorage.s7token=TOKEN;$("login").style.display="none";$("setup").style.display="none";$("panel").style.display="block";load()}catch(e){$("lm").textContent=e.message}}
-async function api(p,o={}){let r=await fetch(API+p,{...o,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(o.headers||{})}}),d=await r.json();if(!r.ok)throw Error(d.error||"Error");return d}
-async function load(){let d=await api("/api/admin/dashboard");$("u").textContent=d.users;$("t").textContent=d.tasks;$("w").textContent=d.pendingWithdrawals;let a=(await api("/api/admin/tasks")).tasks;$("tl").innerHTML="<table><tr><th>ID</th><th>Title</th><th>Reward</th></tr>"+a.map(x=>`<tr><td>${x.id}</td><td>${x.title}</td><td>${x.reward}</td></tr>`).join("")+"</table>";let v=(await api("/api/admin/withdrawals")).withdrawals;$("wl").innerHTML="<table><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th></tr>"+v.map(x=>`<tr><td>${x.id}</td><td>${x.user_id}</td><td>${x.amount}</td><td>${x.status}</td></tr>`).join("")+"</table>"}
-async function savePaymentSettings(){
-  const msg = $("paymsg");
-  try {
-    const result = await api("/api/admin/payment-settings", {
-      method: "PUT",
-      body: JSON.stringify({
-        bkash_number: $("bkash").value.trim(),
-        payment_amount: $("payamount").value,
-        payment_instructions: $("payinstructions").value.trim()
-      })
-    });
-    msg.textContent = result.message || "Saved";
-  } catch (error) {
-    msg.textContent = error.message;
-  }
+
+function esc(value){
+ return String(value??"").replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ }[c]));
 }
-async function addTask(){await api("/api/admin/tasks",{method:"POST",body:JSON.stringify({title:$("tt").value,description:$("td").value,reward:Number($("tr").value||0)})});load()}
-</script></body></html>
+
+async function readResponse(response){
+ let data;
+ try{data=await response.json()}catch{throw Error("Backend থেকে সঠিক উত্তর আসেনি")}
+ if(!response.ok)throw Error(data.error||data.message||"Request failed");
+ return data;
+}
+
+async function setupAdmin(){
+ API=$("api").value.trim().replace(/\/+$/,"");
+ localStorage.s7api=API;
+ try{
+  const r=await fetch(API+"/api/admin/setup",{
+   method:"POST",
+   headers:{
+    "Content-Type":"application/json",
+    "x-setup-key":$("sk").value
+   },
+   body:JSON.stringify({
+    email:$("se").value.trim(),
+    password:$("sp").value
+   })
+  });
+  const d=await readResponse(r);
+  $("sm").textContent=d.message||"Admin তৈরি হয়েছে";
+ }catch(e){$("sm").textContent=e.message}
+}
+
+async function login(){
+ API=$("api").value.trim().replace(/\/+$/,"");
+ localStorage.s7api=API;
+ $("lm").textContent="Login হচ্ছে...";
+ try{
+  const r=await fetch(API+"/api/admin/login",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+    email:$("email").value.trim(),
+    password:$("pass").value
+   })
+  });
+  const d=await readResponse(r);
+  if(!d.token)throw Error("Login token পাওয়া যায়নি");
+  TOKEN=d.token;
+  localStorage.s7token=TOKEN;
+  $("login").style.display="none";
+  $("setup").style.display="none";
+  $("panel").style.display="block";
+  await load();
+ }catch(e){
+  $("lm").textContent=e.message;
+ }
+}
+
+async function apiRequest(path,options={}){
+ const response=await fetch(API+path,{
+  ...options,
+  headers:{
+   "Content-Type":"application/json",
+   "Authorization":"Bearer "+TOKEN,
+   ...(options.headers||{})
+  }
+ });
+ return readResponse(response);
+}
+
+async function loadSettings(){
+ const r=await fetch(API+"/api/payment-settings");
+ const d=await readResponse(r);
+ const s=d.settings||{};
+ $("bkash").value=s.bkash_number||"";
+ $("payamount").value=s.payment_amount||"";
+ $("rewardamount").value=s.reward_amount||"";
+ $("payinstructions").value=s.payment_instructions||"";
+}
+
+async function savePaymentSettings(){
+ const msg=$("paymsg");
+ msg.textContent="সেভ হচ্ছে...";
+ try{
+  const amount=Number($("payamount").value);
+  const reward=Number($("rewardamount").value);
+  if(!Number.isFinite(amount)||amount<=0)throw Error("সঠিক Payment Amount দিন");
+  if(!Number.isFinite(reward)||reward<=0)throw Error("সঠিক Reward Amount দিন");
+
+  const d=await apiRequest("/api/admin/payment-settings",{
+   method:"PUT",
+   body:JSON.stringify({
+    bkash_number:$("bkash").value.trim(),
+    payment_amount:String(amount),
+    reward_amount:String(reward),
+    payment_instructions:$("payinstructions").value.trim()
+   })
+  });
+  msg.textContent=d.message||"Settings সেভ হয়েছে";
+ }catch(e){msg.textContent="সেভ হয়নি: "+e.message}
+}
+
+async function loadDeposits(){
+ const box=$("dl");
+ $("depmsg").textContent="লোড হচ্ছে...";
+ try{
+  const d=await apiRequest("/api/admin/deposits");
+  const list=d.deposits||[];
+  $("depmsg").textContent="মোট আবেদন: "+list.length;
+
+  if(!list.length){
+   box.textContent="কোনো Deposit আবেদন নেই।";
+   return;
+  }
+
+  box.innerHTML="<table><tr><th>ID</th><th>User</th><th>Sender bKash</th><th>Amount</th><th>Transaction ID</th><th>Reward</th><th>Status</th><th>Action</th></tr>"+
+  list.map(x=>{
+   const status=String(x.status||"").toLowerCase();
+   const pending=status==="pending";
+   return `<tr>
+   <td>${esc(x.id)}</td>
+   <td>${esc(x.user_id)}</td>
+   <td>${esc(x.sender_bkash)}</td>
+   <td>${esc(x.amount)}</td>
+   <td>${esc(x.transaction_id)}</td>
+   <td>${esc(x.reward)}</td>
+   <td>${esc(x.status)}</td>
+   <td>${pending?
+    `<button class="approve" onclick="decideDeposit(${Number(x.id)},'approved',this)">Approve</button>
+     <button class="reject" onclick="decideDeposit(${Number(x.id)},'rejected',this)">Reject</button>`
+    :"—"}
+   </td></tr>`;
+  }).join("")+"</table>";
+ }catch(e){
+  $("depmsg").textContent="Deposit লোড হয়নি: "+e.message;
+ }
+}
+
+async function decideDeposit(id,status,button){
+ const action=status==="approved"?"Approve":"Reject";
+ if(status==="approved"&&!confirm("bKash-এ টাকা এসেছে এবং Transaction ID যাচাই করেছেন? নিশ্চিত হলে Reward ক্রেডিট হবে।"))return;
+ if(status==="rejected"&&!confirm("এই Deposit আবেদন Reject করবেন?"))return;
+
+ button.disabled=true;
+ try{
+  const d=await apiRequest("/api/admin/deposits/"+id,{
+   method:"PATCH",
+   body:JSON.stringify({status})
+  });
+  alert(d.message||(action+" request পাঠানো হয়েছে"));
+  await loadDeposits();
+ }catch(e){
+  alert(action+" করা যায়নি: "+e.message);
+  button.disabled=false;
+ }
+}
+
+async function load(){
+ try{
+  const d=await apiRequest("/api/admin/dashboard");
+  $("u").textContent=d.users??"—";
+  $("t").textContent=d.tasks??"—";
+  $("w").textContent=d.pendingWithdrawals??"—";
+
+  await loadSettings();
+
+  const a=(await apiRequest("/api/admin/tasks")).tasks||[];
+  $("tl").innerHTML="<table><tr><th>ID</th><th>Title</th><th>Reward</th></tr>"+
+  a.map(x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.title)}</td><td>${esc(x.reward)}</td></tr>`).join("")+
+  "</table>";
+
+  const v=(await apiRequest("/api/admin/withdrawals")).withdrawals||[];
+  $("wl").innerHTML="<table><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th></tr>"+
+  v.map(x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.user_id)}</td><td>${esc(x.amount)}</td><td>${esc(x.status)}</td></tr>`).join("")+
+  "</table>";
+
+  await loadDeposits();
+ }catch(e){
+  alert("Admin data লোড হয়নি: "+e.message);
+ }
+}
+
+async function addTask(){
+ try{
+  await apiRequest("/api/admin/tasks",{
+   method:"POST",
+   body:JSON.stringify({
+    title:$("tt").value.trim(),
+    description:$("td").value.trim(),
+    reward:Number($("tr").value||0)
+   })
+  });
+  $("taskmsg").textContent="Task যোগ হয়েছে";
+  await load();
+ }catch(e){$("taskmsg").textContent="Task যোগ হয়নি: "+e.message}
+}
+</script>
+</body>
+</html>
